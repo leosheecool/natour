@@ -1,0 +1,18 @@
+{
+  "name": "natour",
+  "version": "1.0.0",
+  "description": "Natour",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start:dev": "NODE_ENV=development nodemon server.js"
+  },
+  "author": "Leo",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "mongoose": "^7.6.2",
+    "morgan": "^1.10.0"
+  }
+}
