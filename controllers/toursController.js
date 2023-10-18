@@ -1,13 +1,51 @@
 const fs = require("fs");
 const Tour = require("../models/tourModel");
 
-exports.getTours = async (req, res) => {
-  try {
-    const queryObj = { ...req.query };
-    const excludedFields = ["page", "sort", "limit", "fields"];
-    excludedFields.forEach((el) => delete queryObj[el]);
+const prepareQuery = async (rawQuery, Model, excludedFields) => {
+  const DEFAULT_PAGE = 1;
+  const DEFAULT_LIMIT = 100;
+  const DEFAULT_SORT = "-createdAt";
+  const DEFAULT_FIELDS = "-__v";
+  const SORTING_REGEX = /(gte|gt|lte|lt)\b/g;
 
-    const tours = await Tour.find(queryObj);
+  const queryObj = { ...rawQuery };
+  excludedFields.forEach((el) => delete queryObj[el]);
+
+  let queryString = JSON.stringify(queryObj);
+  queryString = queryString.replace(SORTING_REGEX, (match) => `$${match}`);
+
+  let query = Model.find(JSON.parse(queryString));
+
+  if (rawQuery.sort) {
+    query = query.sort(rawQuery.sort.replace(",", " "));
+  } else {
+    query = query.sort(DEFAULT_SORT);
+  }
+
+  if (rawQuery.fields) {
+    query = query.select(rawQuery.fields.replace(",", " "));
+  } else {
+    query = query.select(DEFAULT_FIELDS);
+  }
+
+  const page = rawQuery.page * 1 || DEFAULT_PAGE;
+  const limit = rawQuery.limit * 1 || DEFAULT_LIMIT;
+  const skip = (page - 1) * limit;
+  query = query.skip(skip).limit(limit);
+
+  if (rawQuery.page) {
+    const numTours = await Tour.countDocuments();
+    if (skip >= numTours) throw new Error("This page does not exist");
+  }
+
+  return query;
+};
+
+exports.getTours = async (req, res) => {
+  const EXCLUDED_FIELDS = ["page", "sort", "limit", "fields"];
+
+  try {
+    const tours = await prepareQuery(req.query, Tour, EXCLUDED_FIELDS);
 
     res.json({
       status: "success",
@@ -17,10 +55,10 @@ exports.getTours = async (req, res) => {
       }
     });
   } catch (err) {
-    const ERROR_CODE = 400;
+    const ERROR_CODE = 404;
     res.status(ERROR_CODE).json({
       status: "fail",
-      message: err
+      message: `${err}`
     });
   }
 };
