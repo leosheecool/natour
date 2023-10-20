@@ -1,6 +1,10 @@
 const mongoose = require("mongoose");
-
 const slugify = require("slugify");
+
+const TITLE_MIN_LENGTH = 10;
+const TITLE_MAX_LENGTH = 50;
+const MIN_RATING = 1;
+const MAX_RATING = 5;
 
 const toursSchema = new mongoose.Schema(
   {
@@ -8,7 +12,15 @@ const toursSchema = new mongoose.Schema(
       type: String,
       required: [true, "Tour must have a name"],
       unique: [true, "Duplicate key"],
-      trim: true
+      trim: true,
+      maxlength: [
+        TITLE_MAX_LENGTH,
+        `The tour title can't have more than ${TITLE_MAX_LENGTH} characters`
+      ],
+      minlength: [
+        TITLE_MIN_LENGTH,
+        `The tour title can't have less than ${TITLE_MIN_LENGTH} characters`
+      ]
     },
     duration: {
       type: Number,
@@ -40,7 +52,15 @@ const toursSchema = new mongoose.Schema(
     },
     ratingsAverage: {
       type: Number,
-      default: 0
+      default: 0,
+      max: [
+        MAX_RATING,
+        `The maximum average rating must be less than or equals to ${MAX_RATING}`
+      ],
+      min: [
+        MIN_RATING,
+        `The minimum average rating must be great than or equals to ${MIN_RATING}`
+      ]
     },
     ratingsQuantity: {
       type: Number,
