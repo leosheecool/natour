@@ -9,6 +9,8 @@ router
 
 router.route("/").get(toursHandler.getTours).post(toursHandler.createTour);
 
+router.route("/stats").get(toursHandler.getTourStats);
+
 router
   .route("/:id")
   .get(toursHandler.getTour)
