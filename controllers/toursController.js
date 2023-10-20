@@ -161,7 +161,67 @@ exports.getTourStats = async (_, res) => {
       }
     });
   } catch (err) {
-    const ERROR_CODE = 404;
+    const ERROR_CODE = 500;
+    res.status(ERROR_CODE).json({
+      status: "fail",
+      message: err
+    });
+  }
+};
+
+exports.getMonthlyPlan = async (req, res) => {
+  try {
+    const year = req.params.year * 1;
+    const plan = await Tour.aggregate([
+      {
+        $unwind: "$startDates"
+      },
+      {
+        $match: {
+          startDates: {
+            $gte: new Date(`${year}/01/01`),
+            $lte: new Date(`${year}/12/31`)
+          }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            $month: "$startDates"
+          },
+          nbTours: {
+            $sum: 1
+          },
+          tours: {
+            $push: "$name"
+          }
+        }
+      },
+      {
+        $addFields: {
+          month: "$_id"
+        }
+      },
+      {
+        $project: {
+          _id: 0
+        }
+      },
+      {
+        $sort: {
+          month: 1
+        }
+      }
+    ]);
+
+    res.json({
+      status: "success",
+      data: {
+        plan
+      }
+    });
+  } catch (err) {
+    const ERROR_CODE = 500;
     res.status(ERROR_CODE).json({
       status: "fail",
       message: err

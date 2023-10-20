@@ -10,6 +10,7 @@ router
 router.route("/").get(toursHandler.getTours).post(toursHandler.createTour);
 
 router.route("/stats").get(toursHandler.getTourStats);
+router.route("/monthly-plan/:year").get(toursHandler.getMonthlyPlan);
 
 router
   .route("/:id")
