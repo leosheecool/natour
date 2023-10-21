@@ -4,6 +4,8 @@ const morgan = require("morgan");
 const app = express();
 const toursRouter = require("./routes/tourRoutes");
 const usersRouter = require("./routes/userRoutes");
+const AppError = require("./utils/AppError");
+const errorHandler = require("./controllers/errorController");
 
 dotenv.config({
   path: "./.env"
@@ -20,15 +22,12 @@ app.get("/ping", (_, res) => {
 app.use("/api/v1/tours", toursRouter);
 app.use("/api/v1/users", usersRouter);
 
-app.all("*", (req, res, next) => {
+app.all("*", (req, _, next) => {
   const NOT_FOUND_STATUS_CODE = 404;
 
-  res.status(NOT_FOUND_STATUS_CODE).json({
-    status: "fail",
-    message: `Can't find ${req.originalUrl}`
-  });
-
-  next();
+  next(new AppError(`Can't find ${req.originalUrl}`, NOT_FOUND_STATUS_CODE));
 });
+
+app.use(errorHandler);
 
 module.exports = app;
