@@ -1,24 +1,30 @@
 const AppError = require("../utils/AppError");
-const INVALID_PARAMETER = 400;
+const {
+  BAD_REQ_CODE,
+  INTERNAL_SERV_ERROR_CODE,
+  UNAUTHORIZED_CODE
+} = require("../utils/HTTPCodes");
 
 const handleCastErrorDB = (err) => {
   const message = `Invalid ${err.path}: ${err.value}`;
-  return new AppError(message, INVALID_PARAMETER);
+  return new AppError(message, BAD_REQ_CODE);
 };
 
 const handleDuplicateFieldsDB = (err) => {
   const message = `Duplicate field value: "${err.keyValue.name}". Please use another value`;
-  return new AppError(message, INVALID_PARAMETER);
+  return new AppError(message, BAD_REQ_CODE);
 };
 
 const handleValidationErrorDB = (err) => {
   const errors = Object.values(err.errors).map((el) => el.message);
   const message = `Invalid input data. ${errors.join(", ")}`;
-  return new AppError(message, INVALID_PARAMETER);
+  return new AppError(message, BAD_REQ_CODE);
 };
 
+const handleJwtError = () => new AppError("Invalid token", UNAUTHORIZED_CODE);
+const handleJwtExpired = () => new AppError("Expired token", UNAUTHORIZED_CODE);
+
 const errorHandler = (err, _, res, next) => {
-  const INTERNAL_SERV_ERROR_CODE = 500;
   const DUPLICATE_FIELDS_CODE = 11000;
   const isDevEnv = process.env.NODE_ENV === "development";
 
@@ -38,12 +44,14 @@ const errorHandler = (err, _, res, next) => {
     return;
   }
 
-  let error = { ...err, name: err.name };
+  let error = { ...err, name: err.name, message: err.message };
 
   if (error.name === "CastError") error = handleCastErrorDB(error);
   if (error.code === DUPLICATE_FIELDS_CODE)
     error = handleDuplicateFieldsDB(error);
   if (error.name === "ValidationError") error = handleValidationErrorDB(error);
+  if (error.name === "JsonWebTokenError") error = handleJwtError();
+  if (error.name === "TokenExpiredError") error = handleJwtExpired();
 
   errorObj = {
     status: error.status,
