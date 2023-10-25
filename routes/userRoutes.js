@@ -15,6 +15,9 @@ router
 router
   .route("/update-me")
   .patch(authController.protectedRouteHandler, userController.updateMe);
+router
+  .route("/desactivate-me")
+  .patch(authController.protectedRouteHandler, userController.desactivateMe);
 
 router
   .route("/")

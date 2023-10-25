@@ -121,3 +121,17 @@ exports.updateMe = catchAsyncError(async (req, res, next) => {
     }
   });
 });
+
+exports.desactivateMe = catchAsyncError(async (req, res, next) => {
+  const user = await User.findByIdAndUpdate(req.user._id, { active: false });
+
+  if (!user) {
+    next(new AppError("User not found", NOT_FOUND_CODE));
+    return;
+  }
+
+  res.status(SUCCESS_CODE).json({
+    status: "success",
+    data: null
+  });
+});
