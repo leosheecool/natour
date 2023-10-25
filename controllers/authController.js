@@ -13,13 +13,23 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/userModel");
 const { promisify } = require("util");
 const sendEmail = require("../utils/email");
-const { encryptToken } = require("../utils/token");
-const validator = require("validator");
+const { encryptToken, getPropertyFromCookie } = require("../utils/token");
+const convertToDays = 24 * 60 * 60 * 1000;
 
-const getSignedJWT = (id) =>
-  jwt.sign({ id }, process.env.JWT_SECRET, {
+const createResCookieWithJWT = (id, res) => {
+  const token = jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN
   });
+
+  res.cookie("jwt", token, {
+    expires: new Date(
+      Date.now() +
+        parseInt(process.env.JWT_COOKIE_EXPIRES_IN, 10) * convertToDays
+    ),
+    secure: process.env.NODE_ENV === "production",
+    httpOnly: true
+  });
+};
 
 exports.signUp = catchAsyncError(async (req, res, next) => {
   const user = await User.create({
@@ -34,12 +44,15 @@ exports.signUp = catchAsyncError(async (req, res, next) => {
     return;
   }
 
+  createResCookieWithJWT(user._id, res);
+
+  user.password = null;
+
   res.status(CREATED_CODE).json({
     status: "success",
     data: {
       user
-    },
-    token: getSignedJWT(user._id)
+    }
   });
 });
 
@@ -60,19 +73,18 @@ exports.signIn = catchAsyncError(async (req, res, next) => {
     return;
   }
 
+  createResCookieWithJWT(user._id, res);
+
   res.status(SUCCESS_CODE).json({
-    status: "success",
-    token: getSignedJWT(user._id)
+    status: "success"
   });
 });
 
 exports.protectedRouteHandler = catchAsyncError(async (req, _, next) => {
-  if (!req.headers.authorization?.startsWith("Bearer"))
+  const token = getPropertyFromCookie(req.headers.cookie, "jwt");
+
+  if (!token)
     return next(new AppError("You are not logged in", UNAUTHORIZED_CODE));
-
-  const token = req.headers.authorization.split(" ")[1];
-
-  if (!token) return next(new AppError("No token found", UNAUTHORIZED_CODE));
 
   const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
 
@@ -171,10 +183,11 @@ exports.resetPassword = catchAsyncError(async (req, res, next) => {
 
   await user.save();
 
+  createResCookieWithJWT(user._id, res);
+
   res.status(SUCCESS_CODE).json({
     status: "success",
-    message: "Password updated",
-    token: getSignedJWT(user._id)
+    message: "Password updated"
   });
 });
 
@@ -195,10 +208,9 @@ exports.updatePassword = catchAsyncError(async (req, res, next) => {
   req.user.passwordConfirm = newPasswordConfirm;
   await req.user.save();
 
-  const token = getSignedJWT(req.user._id);
+  createResCookieWithJWT(req.user._id, res);
 
   res.status(SUCCESS_CODE).json({
-    status: "success",
-    token
+    status: "success"
   });
 });
