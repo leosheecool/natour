@@ -6,6 +6,15 @@ const router = express.Router();
 
 router.route("/signup").post(authController.signUp);
 router.route("/login").post(authController.signIn);
+router.route("/forgot-password").post(authController.forgotPassword);
+router.patch("/reset-password").post(authController.resetPassword);
+
+router
+  .route("/update-password")
+  .patch(authController.protectedRouteHandler, authController.updatePassword);
+router
+  .route("/update-me")
+  .patch(authController.protectedRouteHandler, userController.updateMe);
 
 router
   .route("/")

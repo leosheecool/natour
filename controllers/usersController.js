@@ -10,6 +10,14 @@ const User = require("../models/userModel");
 
 const NOT_FOUND_MESSAGE = "No user found with that ID";
 
+const filterObj = (obj, ...allowedFields) => {
+  const newObj = {};
+  Object.keys(obj).forEach((el) => {
+    if (allowedFields.includes(el)) newObj[el] = obj[el];
+  });
+  return newObj;
+};
+
 exports.getAllUsers = catchAsyncError(async (_, res) => {
   const users = await User.find();
 
@@ -83,5 +91,33 @@ exports.deleteUser = catchAsyncError(async (req, res, next) => {
   res.status(SUCCESS_CODE).json({
     status: "success",
     data: null
+  });
+});
+
+exports.updateMe = catchAsyncError(async (req, res, next) => {
+  if (req.body.password || req.body.passwordConfirm) {
+    next(new AppError("This route is not for password updates", BAD_REQ_CODE));
+    return;
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    filterObj(req.body, "name", "email"),
+    {
+      new: true,
+      runValidators: true
+    }
+  );
+
+  if (!user) {
+    next(new AppError(NOT_FOUND_MESSAGE, NOT_FOUND_CODE));
+    return;
+  }
+
+  res.status(SUCCESS_CODE).json({
+    status: "success",
+    data: {
+      user
+    }
   });
 });

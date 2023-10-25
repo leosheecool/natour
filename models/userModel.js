@@ -1,6 +1,8 @@
 const mongoose = require("mongoose");
 const validator = require("validator");
 const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
+const { encryptToken } = require("../utils/token");
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -68,7 +70,17 @@ userSchema.pre("save", async function (next) {
   return next();
 });
 
-userSchema.methods.correctPassword = bcrypt.compare;
+userSchema.pre("save", async function (next) {
+  const timeDelta = 1000;
+
+  if (!this.isModified("password") || this.isNew) return next();
+
+  this.passwordChangedAt = Date.now() - timeDelta;
+
+  return next();
+});
+
+userSchema.methods.isCorrectPassword = bcrypt.compare;
 userSchema.methods.changedPasswordAfter = (time) => {
   const millisecondsToSeconds = 1000;
 
@@ -82,6 +94,22 @@ userSchema.methods.changedPasswordAfter = (time) => {
   }
 
   return false;
+};
+
+userSchema.methods.generateResetPasswordToken = function () {
+  const stringLength = 32;
+  const min = 10;
+  const sec = 60;
+  const ms = 1000;
+  const validityTime = min * sec * ms;
+
+  const resetToken = crypto.randomBytes(stringLength).toString("hex");
+
+  this.passwordResetToken = encryptToken(resetToken);
+
+  this.passwordResetExpires = Date.now() + validityTime;
+
+  return resetToken;
 };
 
 const userModel = mongoose.model("User", userSchema);
