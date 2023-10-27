@@ -14,7 +14,7 @@ const OPERATION_ARG_POS = 2;
 mongoose.connect(DB_URI).then(() => console.log("DB connected"));
 
 const tours = JSON.parse(
-  fs.readFileSync(`${__dirname}/dev-data/data/tours-simple.json`, "utf-8")
+  fs.readFileSync(`${__dirname}/dev-data/data/tours.json`, "utf-8")
 );
 tours.forEach((item) => delete item.id);
 

@@ -87,7 +87,36 @@ const toursSchema = new mongoose.Schema(
     secretTour: {
       type: Boolean,
       default: false
-    }
+    },
+    startLocation: {
+      type: {
+        type: String,
+        default: "Point",
+        enum: ["Point"]
+      },
+      coordinates: [Number],
+      address: String,
+      description: String
+    },
+    locations: [
+      {
+        type: {
+          type: String,
+          default: "Point",
+          enum: ["Point"]
+        },
+        coordinates: [Number],
+        address: String,
+        description: String,
+        day: Number
+      }
+    ],
+    guides: [
+      {
+        type: mongoose.Schema.ObjectId,
+        ref: "User"
+      }
+    ]
   },
   {
     toJSON: { virtuals: true },
@@ -105,8 +134,18 @@ toursSchema.pre("save", function (next) {
   next();
 });
 
+// toursSchema.pre("save", async function (next) {
+//   const guidesPromises = this.guides.map(async (id) => User.findById(id));
+//   this.guides = await Promise.all(guidesPromises);
+
+//   next();
+// });
+
 toursSchema.pre(/^find/, function (next) {
-  this.find({ secretTour: { $ne: true } });
+  this.find({ secretTour: { $ne: true } }).populate({
+    path: "guides",
+    select: "-__v -passwordChangedAt"
+  });
   next();
 });
 
