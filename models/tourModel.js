@@ -129,17 +129,16 @@ toursSchema.virtual("durationWeeks").get(function () {
   return this.duration / WEEK_DURATION;
 });
 
+toursSchema.virtual("reviews", {
+  ref: "Review",
+  foreignField: "tour",
+  localField: "_id"
+});
+
 toursSchema.pre("save", function (next) {
   this.slug = slugify(this.name, { lower: true });
   next();
 });
-
-// toursSchema.pre("save", async function (next) {
-//   const guidesPromises = this.guides.map(async (id) => User.findById(id));
-//   this.guides = await Promise.all(guidesPromises);
-
-//   next();
-// });
 
 toursSchema.pre(/^find/, function (next) {
   this.find({ secretTour: { $ne: true } }).populate({

@@ -12,6 +12,7 @@ const xssClean = require("xss-clean");
 
 const toursRouter = require("./routes/tourRoutes");
 const usersRouter = require("./routes/userRoutes");
+const reviewsRouter = require("./routes/reviewRoutes");
 
 dotenv.config({
   path: "./.env"
@@ -62,6 +63,7 @@ app.get("/ping", (_, res) => {
 // Set routers
 app.use("/api/v1/tours", toursRouter);
 app.use("/api/v1/users", usersRouter);
+app.use("/api/v1/reviews", reviewsRouter);
 
 // Set route fallback
 app.all("*", (req, _, next) => {

@@ -1,5 +1,6 @@
 exports.SUCCESS_CODE = 200;
 exports.CREATED_CODE = 201;
+exports.DELETED_CODE = 204;
 exports.BAD_REQ_CODE = 400;
 exports.UNAUTHORIZED_CODE = 401;
 exports.FORBIDEN_CODE = 403;

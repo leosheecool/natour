@@ -88,7 +88,7 @@ exports.protectedRouteHandler = catchAsyncError(async (req, _, next) => {
 
   const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
 
-  const user = await User.findById(decoded.id).select("+password");
+  const user = await User.findById(decoded.id);
 
   if (!user)
     return next(
@@ -199,16 +199,23 @@ exports.updatePassword = catchAsyncError(async (req, res, next) => {
     return;
   }
 
-  if (!(await req.user.isCorrectPassword(currentPassword, req.user.password))) {
+  const user = await User.findById(req.user._id).select("+password");
+
+  if (!user) {
+    next(new AppError("User does not exist", NOT_FOUND_CODE));
+    return;
+  }
+
+  if (!(await user.isCorrectPassword(currentPassword, user.password))) {
     next(new AppError("Incorrect password", UNAUTHORIZED_CODE));
     return;
   }
 
-  req.user.password = newPassword;
-  req.user.passwordConfirm = newPasswordConfirm;
-  await req.user.save();
+  user.password = newPassword;
+  user.passwordConfirm = newPasswordConfirm;
+  await user.save();
 
-  createResCookieWithJWT(req.user._id, res);
+  createResCookieWithJWT(user._id, res);
 
   res.status(SUCCESS_CODE).json({
     status: "success"
