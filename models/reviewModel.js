@@ -1,5 +1,5 @@
-const express = require("express");
 const mongoose = require("mongoose");
+const Tour = require("./tourModel");
 
 const MIN_RATING = 1;
 const MAX_RATING = 5;
@@ -49,12 +49,42 @@ reviewSchema.pre(/^find/, function (next) {
     select: "name photo"
   });
 
-  // this.populate({
-  //   path: "tour",
-  //   select: "name"
-  // });
-
   next();
+});
+
+reviewSchema.statics.calcAverageRating = async function (tourId) {
+  const defaultAvgRating = 4.5;
+
+  const stats = await this.aggregate([
+    {
+      $match: { tour: tourId }
+    },
+    {
+      $group: {
+        _id: "$tour",
+        nbRating: { $sum: 1 },
+        avgRating: { $avg: "$rating" }
+      }
+    }
+  ]);
+
+  await Tour.findByIdAndUpdate(tourId, {
+    ratingsAverage: stats[0]?.avgRating ?? defaultAvgRating,
+    ratingsQuantity: stats[0]?.nbRating ?? 0
+  });
+};
+
+reviewSchema.post("save", function () {
+  this.constructor.calcAverageRating(this.tour);
+});
+
+reviewSchema.pre(/^findOneAnd/, async function (next) {
+  this.review = await this.clone().findOne();
+  next();
+});
+
+reviewSchema.post(/^findOneAnd/, async function () {
+  await this.review.constructor.calcAverageRating(this.review.tour);
 });
 
 const Review = mongoose.model("Review", reviewSchema);

@@ -22,6 +22,11 @@ exports.getAllUsers = factory.getAll(User);
 
 exports.getUser = factory.getOne(User);
 
+exports.getMe = (req, _, next) => {
+  req.params.id = req.user._id;
+  next();
+};
+
 exports.createUser = factory.createOne(User);
 
 exports.updateUser = factory.updateOne(User);
