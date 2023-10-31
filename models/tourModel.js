@@ -60,7 +60,8 @@ const toursSchema = new mongoose.Schema(
       min: [
         MIN_RATING,
         `The minimum average rating must be great than or equals to ${MIN_RATING}`
-      ]
+      ],
+      set: (val) => Math.round(val * 10) / 10
     },
     ratingsQuantity: {
       type: Number,
