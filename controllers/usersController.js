@@ -7,20 +7,10 @@ const AppError = require("../utils/AppError");
 const catchAsyncError = require("../utils/catchAsyncError");
 const factory = require("./handlerFactory");
 const multer = require("multer");
-const sharp = require("sharp");
+const { resizePhotos } = require("../utils/fileUpload");
 const User = require("../models/userModel");
 
 const NOT_FOUND_MESSAGE = "No user found with that ID";
-
-// const multerStorage = multer.diskStorage({
-//   destination: (_, __, cb) => {
-//     cb(null, "public/img/users");
-//   },
-//   filename: (req, file, cb) => {
-//     const ext = file.mimetype.split("/")[1];
-//     cb(null, `user-${req.user.id}-${Date.now()}.${ext}`);
-//   }
-// });
 
 const multerStorage = multer.memoryStorage();
 
@@ -59,13 +49,16 @@ exports.resizeUserPhoto = catchAsyncError(async (req, _, next) => {
     return;
   }
 
-  req.file.filename = `user-${req.user.id}-${Date.now()}.webp`;
-
-  sharp(req.file.buffer)
-    .resize(imgSize, imgSize)
-    .toFormat("webp")
-    .webp({ quality: 100 })
-    .toFile(`public/img/users/${req.file.filename}`);
+  const [filename] = await resizePhotos(
+    [req.file.buffer],
+    `user-${req.user.id}-`,
+    "public/img/users/",
+    {
+      width: imgSize,
+      height: imgSize
+    }
+  );
+  req.file.filename = filename;
   next();
 });
 

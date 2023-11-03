@@ -2,7 +2,9 @@ const Tour = require("../models/tourModel");
 const AppError = require("../utils/AppError");
 const { BAD_REQ_CODE } = require("../utils/HTTPCodes");
 const catchAsyncErrors = require("../utils/catchAsyncError");
+const { resizePhotos } = require("../utils/fileUpload");
 const factory = require("./handlerFactory");
+const multer = require("multer");
 
 exports.aliasTopTours = (req, _, next) => {
   req.query.limit = "5";
@@ -11,6 +13,70 @@ exports.aliasTopTours = (req, _, next) => {
 
   next();
 };
+
+const multerStorage = multer.memoryStorage();
+
+const multerFilter = (_, file, cb) => {
+  if (file.mimetype.startsWith("image")) {
+    cb(null, true);
+    return;
+  }
+
+  cb(
+    new AppError("Not an image! Please upload only images", BAD_REQ_CODE),
+    false
+  );
+};
+
+const upload = multer({
+  storage: multerStorage,
+  fileFilter: multerFilter
+});
+
+exports.uploadTourImages = upload.fields([
+  {
+    name: "imageCover",
+    maxCount: 1
+  },
+  {
+    name: "images",
+    maxCount: 5
+  }
+]);
+
+exports.resizeTourImages = catchAsyncErrors(async (req, _, next) => {
+  const coverImgSize = {
+    width: 2000,
+    height: 1333
+  };
+  const imagesSize = {
+    width: 500,
+    height: 500
+  };
+
+  if (req.files.imageCover) {
+    const [filename] = await resizePhotos(
+      [req.files.imageCover[0].buffer],
+      `tour-${req.params.id}-cover`,
+      "public/img/tours/",
+      coverImgSize
+    );
+
+    req.body.imageCover = filename;
+  }
+
+  if (req.files.images) {
+    const filenames = await resizePhotos(
+      req.files.images.map((img) => img.buffer),
+      `tour-${req.params.id}-image`,
+      "public/img/tours/",
+      imagesSize
+    );
+
+    req.body.images = filenames;
+  }
+  next();
+});
 
 exports.getTours = factory.getAll(Tour);
 
