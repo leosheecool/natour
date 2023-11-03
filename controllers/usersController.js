@@ -1,14 +1,45 @@
-const AppError = require("../utils/AppError");
-const catchAsyncError = require("../utils/catchAsyncError");
 const {
   SUCCESS_CODE,
   NOT_FOUND_CODE,
   BAD_REQ_CODE
 } = require("../utils/HTTPCodes");
-const User = require("../models/userModel");
+const AppError = require("../utils/AppError");
+const catchAsyncError = require("../utils/catchAsyncError");
 const factory = require("./handlerFactory");
+const multer = require("multer");
+const sharp = require("sharp");
+const User = require("../models/userModel");
 
 const NOT_FOUND_MESSAGE = "No user found with that ID";
+
+// const multerStorage = multer.diskStorage({
+//   destination: (_, __, cb) => {
+//     cb(null, "public/img/users");
+//   },
+//   filename: (req, file, cb) => {
+//     const ext = file.mimetype.split("/")[1];
+//     cb(null, `user-${req.user.id}-${Date.now()}.${ext}`);
+//   }
+// });
+
+const multerStorage = multer.memoryStorage();
+
+const multerFilter = (_, file, cb) => {
+  if (file.mimetype.startsWith("image")) {
+    cb(null, true);
+    return;
+  }
+
+  cb(
+    new AppError("Not an image! Please upload only images", BAD_REQ_CODE),
+    false
+  );
+};
+
+const upload = multer({
+  storage: multerStorage,
+  fileFilter: multerFilter
+});
 
 const filterObj = (obj, ...allowedFields) => {
   const newObj = {};
@@ -17,6 +48,26 @@ const filterObj = (obj, ...allowedFields) => {
   });
   return newObj;
 };
+
+exports.uploadUserPhoto = upload.single("photo");
+
+exports.resizeUserPhoto = catchAsyncError(async (req, _, next) => {
+  const imgSize = 500;
+
+  if (!req.file) {
+    next();
+    return;
+  }
+
+  req.file.filename = `user-${req.user.id}-${Date.now()}.webp`;
+
+  sharp(req.file.buffer)
+    .resize(imgSize, imgSize)
+    .toFormat("webp")
+    .webp({ quality: 100 })
+    .toFile(`public/img/users/${req.file.filename}`);
+  next();
+});
 
 exports.getAllUsers = factory.getAll(User);
 
@@ -39,9 +90,13 @@ exports.updateMe = catchAsyncError(async (req, res, next) => {
     return;
   }
 
+  if (req.file) {
+    req.body.photo = req.file.filename;
+  }
+
   const user = await User.findByIdAndUpdate(
     req.user._id,
-    filterObj(req.body, "name", "email"),
+    filterObj(req.body, "name", "email", "photo"),
     {
       new: true,
       runValidators: true
